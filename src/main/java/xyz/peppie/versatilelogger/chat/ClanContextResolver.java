@@ -53,12 +53,15 @@ public class ClanContextResolver
 
 	public UserDto buildUser(MessageNode node)
 	{
-		// Text.sanitize (not just the raw node value) — OSRS display names use U+00A0 (non-breaking
-		// space) between first/last name, e.g. "Some Name". Sending that raw meant a consumer
-		// matching this against a real username elsewhere (e.g. splash-helper-backend resolving
-		// !log/!pets against RuneProfile's/RuneLite's own API) would silently 404 on any two-word
-		// RSN, since the account's real, normally-spaced username never matches.
-		String senderName = Text.sanitize(node.getName());
+		// Deliberately the raw node value, NOT Text.sanitize(node.getName()) - sanitize also
+		// strips a leading <img=N> tag (the client embeds the sender's mod/ironman status that
+		// way), which the frontend needs intact to show that icon. A previous version of this
+		// method called Text.sanitize() here specifically to normalize U+00A0 (non-breaking
+		// space) in two-word RSNs for a downstream consumer's benefit (splash-helper-backend
+		// resolving !log/!pets against RuneProfile's/RuneLite's own API) - that silently broke
+		// the status icon for every sender. That normalization now happens backend-side instead,
+		// scoped to just the API-lookup username rather than this display-facing field.
+		String senderName = node.getName();
 		int ironmanType = client.getVarbitValue(VarbitID.IRONMAN);
 		ClanRankDto clanRank = resolveClanRank(senderName);
 		String friendsChatRank = resolveFriendsChatRank(senderName);
