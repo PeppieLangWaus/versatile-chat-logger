@@ -24,11 +24,23 @@ public interface VersatileLoggerConfig extends Config
 		ICONS
 	}
 
+	/**
+	 * Like {@link IncludeOptionBasic}, but for the two categories a player can type a chat
+	 * command into with no channel name of its own to show (public chat, private messages).
+	 */
+	enum IncludeOptionBasicCommand
+	{
+		TIMESTAMP,
+		ICONS,
+		COMMAND_OUTPUT
+	}
+
 	enum IncludeOptionFriendsChat
 	{
 		TIMESTAMP,
 		ICONS,
-		FRIENDS_CHAT_NAME
+		FRIENDS_CHAT_NAME,
+		COMMAND_OUTPUT
 	}
 
 	enum IncludeOptionClanChat
@@ -36,6 +48,18 @@ public interface VersatileLoggerConfig extends Config
 		TIMESTAMP,
 		ICONS,
 		CLAN_CHAT_NAME
+	}
+
+	/**
+	 * Like {@link IncludeOptionClanChat}, but for clan chat specifically, which (unlike guest
+	 * clan chat) is a category this plugin watches typed chat commands in.
+	 */
+	enum IncludeOptionClanChatCommand
+	{
+		TIMESTAMP,
+		ICONS,
+		CLAN_CHAT_NAME,
+		COMMAND_OUTPUT
 	}
 
 	enum IncludeOptionGroupChat
@@ -188,15 +212,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "publicChatInclude",
-		name = "Include",
-		description = "Which parts of each public chat message to include when logging/sending.",
+		keyName = "publicChatOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for public chat instead of the global Format setting.",
 		section = PUBLIC_CHAT_SECTION,
 		position = 25
 	)
-	default Set<IncludeOptionBasic> publicChatInclude()
+	default boolean publicChatOverrideFormatEnabled()
 	{
-		return EnumSet.allOf(IncludeOptionBasic.class);
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "publicChatOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for public chat when the override above is enabled.",
+		section = PUBLIC_CHAT_SECTION,
+		position = 26
+	)
+	default FormatMode publicChatOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
+		keyName = "publicChatInclude",
+		name = "Include",
+		description = "Which parts of each public chat message to include when logging/sending. Command output additionally sends/logs a follow-up once a typed chat command (e.g. !log) resolves.",
+		section = PUBLIC_CHAT_SECTION,
+		position = 27
+	)
+	default Set<IncludeOptionBasicCommand> publicChatInclude()
+	{
+		return EnumSet.allOf(IncludeOptionBasicCommand.class);
+	}
+
+	@ConfigItem(
+		keyName = "publicChatDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = PUBLIC_CHAT_SECTION,
+		position = 28
+	)
+	default boolean publicChatDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== Channel chat (friends chat) ====
@@ -258,15 +318,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "channelChatInclude",
-		name = "Include",
-		description = "Which parts of each friends chat message to include when logging/sending.",
+		keyName = "channelChatOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for friends chat instead of the global Format setting.",
 		section = CHANNEL_CHAT_SECTION,
 		position = 35
+	)
+	default boolean channelChatOverrideFormatEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "channelChatOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for friends chat when the override above is enabled.",
+		section = CHANNEL_CHAT_SECTION,
+		position = 36
+	)
+	default FormatMode channelChatOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
+		keyName = "channelChatInclude",
+		name = "Include",
+		description = "Which parts of each friends chat message to include when logging/sending. Command output additionally sends/logs a follow-up once a typed chat command (e.g. !log) resolves.",
+		section = CHANNEL_CHAT_SECTION,
+		position = 37
 	)
 	default Set<IncludeOptionFriendsChat> channelChatInclude()
 	{
 		return EnumSet.allOf(IncludeOptionFriendsChat.class);
+	}
+
+	@ConfigItem(
+		keyName = "channelChatDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = CHANNEL_CHAT_SECTION,
+		position = 38
+	)
+	default boolean channelChatDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== Clan chat ====
@@ -328,15 +424,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "clanChatInclude",
-		name = "Include",
-		description = "Which parts of each clan chat message to include when logging/sending.",
+		keyName = "clanChatOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for clan chat instead of the global Format setting.",
 		section = CLAN_CHAT_SECTION,
 		position = 45
 	)
-	default Set<IncludeOptionClanChat> clanChatInclude()
+	default boolean clanChatOverrideFormatEnabled()
 	{
-		return EnumSet.allOf(IncludeOptionClanChat.class);
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "clanChatOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for clan chat when the override above is enabled.",
+		section = CLAN_CHAT_SECTION,
+		position = 46
+	)
+	default FormatMode clanChatOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
+		keyName = "clanChatInclude",
+		name = "Include",
+		description = "Which parts of each clan chat message to include when logging/sending. Command output additionally sends/logs a follow-up once a typed chat command (e.g. !log) resolves.",
+		section = CLAN_CHAT_SECTION,
+		position = 47
+	)
+	default Set<IncludeOptionClanChatCommand> clanChatInclude()
+	{
+		return EnumSet.allOf(IncludeOptionClanChatCommand.class);
+	}
+
+	@ConfigItem(
+		keyName = "clanChatDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = CLAN_CHAT_SECTION,
+		position = 48
+	)
+	default boolean clanChatDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== Game messages ====
@@ -398,15 +530,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "gameMessagesOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for game messages instead of the global Format setting.",
+		section = GAME_MESSAGES_SECTION,
+		position = 55
+	)
+	default boolean gameMessagesOverrideFormatEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "gameMessagesOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for game messages when the override above is enabled.",
+		section = GAME_MESSAGES_SECTION,
+		position = 56
+	)
+	default FormatMode gameMessagesOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
 		keyName = "gameMessagesInclude",
 		name = "Include",
 		description = "Which parts of each game message to include when logging/sending.",
 		section = GAME_MESSAGES_SECTION,
-		position = 55
+		position = 57
 	)
 	default Set<IncludeOptionBasic> gameMessagesInclude()
 	{
 		return EnumSet.allOf(IncludeOptionBasic.class);
+	}
+
+	@ConfigItem(
+		keyName = "gameMessagesDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = GAME_MESSAGES_SECTION,
+		position = 58
+	)
+	default boolean gameMessagesDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== Private messages ====
@@ -468,15 +636,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "privateMessagesInclude",
-		name = "Include",
-		description = "Which parts of each private message to include when logging/sending.",
+		keyName = "privateMessagesOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for private messages instead of the global Format setting.",
 		section = PRIVATE_MESSAGES_SECTION,
 		position = 65
 	)
-	default Set<IncludeOptionBasic> privateMessagesInclude()
+	default boolean privateMessagesOverrideFormatEnabled()
 	{
-		return EnumSet.allOf(IncludeOptionBasic.class);
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "privateMessagesOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for private messages when the override above is enabled.",
+		section = PRIVATE_MESSAGES_SECTION,
+		position = 66
+	)
+	default FormatMode privateMessagesOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
+		keyName = "privateMessagesInclude",
+		name = "Include",
+		description = "Which parts of each private message to include when logging/sending. Command output additionally sends/logs a follow-up once a typed chat command (e.g. !log) resolves.",
+		section = PRIVATE_MESSAGES_SECTION,
+		position = 67
+	)
+	default Set<IncludeOptionBasicCommand> privateMessagesInclude()
+	{
+		return EnumSet.allOf(IncludeOptionBasicCommand.class);
+	}
+
+	@ConfigItem(
+		keyName = "privateMessagesDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = PRIVATE_MESSAGES_SECTION,
+		position = 68
+	)
+	default boolean privateMessagesDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== Guest clan chat ====
@@ -538,15 +742,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "guestClanChatOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for guest clan chat instead of the global Format setting.",
+		section = GUEST_CLAN_CHAT_SECTION,
+		position = 75
+	)
+	default boolean guestClanChatOverrideFormatEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "guestClanChatOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for guest clan chat when the override above is enabled.",
+		section = GUEST_CLAN_CHAT_SECTION,
+		position = 76
+	)
+	default FormatMode guestClanChatOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
 		keyName = "guestClanChatInclude",
 		name = "Include",
 		description = "Which parts of each guest clan chat message to include when logging/sending.",
 		section = GUEST_CLAN_CHAT_SECTION,
-		position = 75
+		position = 77
 	)
 	default Set<IncludeOptionClanChat> guestClanChatInclude()
 	{
 		return EnumSet.allOf(IncludeOptionClanChat.class);
+	}
+
+	@ConfigItem(
+		keyName = "guestClanChatDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = GUEST_CLAN_CHAT_SECTION,
+		position = 78
+	)
+	default boolean guestClanChatDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== Group chat (Group Ironman) ====
@@ -608,15 +848,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "groupChatOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for group ironman chat instead of the global Format setting.",
+		section = GROUP_CHAT_SECTION,
+		position = 85
+	)
+	default boolean groupChatOverrideFormatEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "groupChatOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for group ironman chat when the override above is enabled.",
+		section = GROUP_CHAT_SECTION,
+		position = 86
+	)
+	default FormatMode groupChatOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
 		keyName = "groupChatInclude",
 		name = "Include",
 		description = "Which parts of each group ironman chat message to include when logging/sending.",
 		section = GROUP_CHAT_SECTION,
-		position = 85
+		position = 87
 	)
 	default Set<IncludeOptionGroupChat> groupChatInclude()
 	{
 		return EnumSet.allOf(IncludeOptionGroupChat.class);
+	}
+
+	@ConfigItem(
+		keyName = "groupChatDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = GROUP_CHAT_SECTION,
+		position = 88
+	)
+	default boolean groupChatDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== Collection log unlock ====
@@ -678,15 +954,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "collectionLogOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for collection log unlocks instead of the global Format setting.",
+		section = COLLECTION_LOG_SECTION,
+		position = 95
+	)
+	default boolean collectionLogOverrideFormatEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "collectionLogOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for collection log unlocks when the override above is enabled.",
+		section = COLLECTION_LOG_SECTION,
+		position = 96
+	)
+	default FormatMode collectionLogOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
 		keyName = "collectionLogInclude",
 		name = "Include",
 		description = "Which parts of each collection log unlock message to include when logging/sending.",
 		section = COLLECTION_LOG_SECTION,
-		position = 95
+		position = 97
 	)
 	default Set<IncludeOptionBasic> collectionLogInclude()
 	{
 		return EnumSet.allOf(IncludeOptionBasic.class);
+	}
+
+	@ConfigItem(
+		keyName = "collectionLogDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = COLLECTION_LOG_SECTION,
+		position = 98
+	)
+	default boolean collectionLogDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== High value drop ====
@@ -748,15 +1060,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "highValueDropOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for high value drops instead of the global Format setting.",
+		section = HIGH_VALUE_DROP_SECTION,
+		position = 105
+	)
+	default boolean highValueDropOverrideFormatEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "highValueDropOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for high value drops when the override above is enabled.",
+		section = HIGH_VALUE_DROP_SECTION,
+		position = 106
+	)
+	default FormatMode highValueDropOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
 		keyName = "highValueDropInclude",
 		name = "Include",
 		description = "Which parts of each high value drop message to include when logging/sending.",
 		section = HIGH_VALUE_DROP_SECTION,
-		position = 105
+		position = 107
 	)
 	default Set<IncludeOptionBasic> highValueDropInclude()
 	{
 		return EnumSet.allOf(IncludeOptionBasic.class);
+	}
+
+	@ConfigItem(
+		keyName = "highValueDropDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = HIGH_VALUE_DROP_SECTION,
+		position = 108
+	)
+	default boolean highValueDropDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== Pet drops ====
@@ -818,15 +1166,51 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "petDropOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for pet drops instead of the global Format setting.",
+		section = PET_DROP_SECTION,
+		position = 115
+	)
+	default boolean petDropOverrideFormatEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "petDropOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for pet drops when the override above is enabled.",
+		section = PET_DROP_SECTION,
+		position = 116
+	)
+	default FormatMode petDropOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
 		keyName = "petDropInclude",
 		name = "Include",
 		description = "Which parts of each pet drop message to include when logging/sending.",
 		section = PET_DROP_SECTION,
-		position = 115
+		position = 117
 	)
 	default Set<IncludeOptionBasic> petDropInclude()
 	{
 		return EnumSet.allOf(IncludeOptionBasic.class);
+	}
+
+	@ConfigItem(
+		keyName = "petDropDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = PET_DROP_SECTION,
+		position = 118
+	)
+	default boolean petDropDetailedTimestamp()
+	{
+		return false;
 	}
 
 	// ==== Level up ====
@@ -888,14 +1272,50 @@ public interface VersatileLoggerConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "levelUpOverrideFormatEnabled",
+		name = "Override format",
+		description = "Use a different remote format for level-ups instead of the global Format setting.",
+		section = LEVEL_UP_SECTION,
+		position = 125
+	)
+	default boolean levelUpOverrideFormatEnabled()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "levelUpOverrideFormat",
+		name = "Format",
+		description = "The remote format to use for level-ups when the override above is enabled.",
+		section = LEVEL_UP_SECTION,
+		position = 126
+	)
+	default FormatMode levelUpOverrideFormat()
+	{
+		return FormatMode.IN_GAME_MESSAGE;
+	}
+
+	@ConfigItem(
 		keyName = "levelUpInclude",
 		name = "Include",
 		description = "Which parts of each level-up message to include when logging/sending.",
 		section = LEVEL_UP_SECTION,
-		position = 125
+		position = 127
 	)
 	default Set<IncludeOptionBasic> levelUpInclude()
 	{
 		return EnumSet.allOf(IncludeOptionBasic.class);
+	}
+
+	@ConfigItem(
+		keyName = "levelUpDetailedTimestamp",
+		name = "Detailed timestamp",
+		description = "Adds seconds to this category's logged timestamps (HH:mm:ss instead of HH:mm). Only has an effect when Timestamp is included above.",
+		section = LEVEL_UP_SECTION,
+		position = 128
+	)
+	default boolean levelUpDetailedTimestamp()
+	{
+		return false;
 	}
 }

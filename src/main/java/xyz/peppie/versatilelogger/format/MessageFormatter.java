@@ -13,18 +13,21 @@ import net.runelite.client.util.Text;
  */
 public class MessageFormatter
 {
-	private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss")
+	private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
+		.withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter TIME_FORMAT_DETAILED = DateTimeFormatter.ofPattern("HH:mm:ss")
 		.withZone(ZoneId.systemDefault());
 
-	public String buildLine(MessageNode node, Set<LineIncludeOption> include)
+	public String buildLine(MessageNode node, Set<LineIncludeOption> include, boolean detailedTimestamp)
 	{
 		boolean showIcons = include.contains(LineIncludeOption.ICONS);
 		StringBuilder line = new StringBuilder();
 
 		if (include.contains(LineIncludeOption.TIMESTAMP))
 		{
+			DateTimeFormatter timeFormat = detailedTimestamp ? TIME_FORMAT_DETAILED : TIME_FORMAT;
 			line.append('[')
-				.append(TIME_FORMAT.format(Instant.ofEpochSecond(node.getTimestamp())))
+				.append(timeFormat.format(Instant.ofEpochSecond(node.getTimestamp())))
 				.append("] ");
 		}
 
@@ -43,9 +46,24 @@ public class MessageFormatter
 			line.append(speaker).append(": ");
 		}
 
-		line.append(applyIconFilter(node.getValue(), showIcons));
+		line.append(applyIconFilter(resolvedValue(node), showIcons));
 
 		return line.toString();
+	}
+
+	/**
+	 * Chat commands (e.g. {@code !log}, {@code !pets}) aren't resolved by editing
+	 * {@link MessageNode#getValue()} or by firing a new event - RuneLite's {@code
+	 * ChatCommandManager}, and third-party plugins built on it such as RuneProfile, resolve them
+	 * by overwriting {@link MessageNode#getRuneLiteFormatMessage()} on the same node, sometimes
+	 * after a network round trip. Preferring it here - matching what the client itself renders -
+	 * means a caller that re-reads a node after resolution automatically picks up the output
+	 * instead of the raw command text.
+	 */
+	public static String resolvedValue(MessageNode node)
+	{
+		String formatted = node.getRuneLiteFormatMessage();
+		return formatted != null ? formatted : node.getValue();
 	}
 
 	/**

@@ -19,6 +19,7 @@ import xyz.peppie.versatilelogger.dto.ClanRankDto;
 import xyz.peppie.versatilelogger.dto.FriendsChatDto;
 import xyz.peppie.versatilelogger.dto.MessageDto;
 import xyz.peppie.versatilelogger.dto.UserDto;
+import xyz.peppie.versatilelogger.format.MessageFormatter;
 
 /**
  * Resolves the clan/friends-chat context needed for the "Full" remote format. Every method here
@@ -38,13 +39,16 @@ public class ClanContextResolver
 	}
 
 	/**
-	 * {@code text} is the raw, unfiltered {@code MessageNode.getValue()} (icon/formatting tags
-	 * intact) — "Full" mode is meant to send every property as-is, unlike "In-game message" mode
-	 * which respects each category's icon-filtering include option.
+	 * {@code text} is {@link MessageFormatter#resolvedValue(MessageNode)} - the node's current
+	 * value with icon/formatting tags intact - unlike "In-game message" mode which respects each
+	 * category's icon-filtering include option. For a chat command this is the raw command text
+	 * until it resolves; {@code edited} is set on the follow-up resend once it does, so a backend
+	 * can tell the two sends apart while correlating them by {@code id}.
 	 */
-	public MessageDto buildMessage(MessageNode node)
+	public MessageDto buildMessage(MessageNode node, boolean edited)
 	{
-		return new MessageDto(node.getId(), node.getTimestamp(), node.getType().name(), node.getValue());
+		return new MessageDto(node.getId(), node.getTimestamp(), node.getType().name(),
+			MessageFormatter.resolvedValue(node), edited);
 	}
 
 	public UserDto buildUser(MessageNode node)
