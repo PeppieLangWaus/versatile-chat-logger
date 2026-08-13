@@ -53,7 +53,12 @@ public class ClanContextResolver
 
 	public UserDto buildUser(MessageNode node)
 	{
-		String senderName = node.getName();
+		// Text.sanitize (not just the raw node value) — OSRS display names use U+00A0 (non-breaking
+		// space) between first/last name, e.g. "Some Name". Sending that raw meant a consumer
+		// matching this against a real username elsewhere (e.g. splash-helper-backend resolving
+		// !log/!pets against RuneProfile's/RuneLite's own API) would silently 404 on any two-word
+		// RSN, since the account's real, normally-spaced username never matches.
+		String senderName = Text.sanitize(node.getName());
 		int ironmanType = client.getVarbitValue(VarbitID.IRONMAN);
 		ClanRankDto clanRank = resolveClanRank(senderName);
 		String friendsChatRank = resolveFriendsChatRank(senderName);
