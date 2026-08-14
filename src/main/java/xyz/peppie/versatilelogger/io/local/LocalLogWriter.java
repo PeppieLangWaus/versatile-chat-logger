@@ -16,12 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.RuneLite;
 import xyz.peppie.versatilelogger.chat.ChatCategory;
 
-/**
- * Owns all local log file state and I/O. Every field here is only ever read or written from
- * tasks submitted to the single background executor passed to {@link #startUp}, so there is no
- * cross-thread synchronization needed — callers (which run on the client thread) only ever
- * submit work, never touch the writer state directly.
- */
 @Slf4j
 @Singleton
 public class LocalLogWriter
@@ -45,11 +39,6 @@ public class LocalLogWriter
 		this.executor = executor;
 	}
 
-	/**
-	 * Starts a new session for the given account, closing whatever session (if any) was
-	 * previously open. Safe to call repeatedly for the same account (e.g. on world hop) since
-	 * the caller is expected to only call this when the active account actually changes.
-	 */
 	public void beginSession(String accountName, boolean perCategoryFiles)
 	{
 		if (executor == null)

@@ -1,6 +1,9 @@
 package xyz.peppie.versatilelogger;
 
 import com.google.inject.Provides;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,6 +28,7 @@ import xyz.peppie.versatilelogger.chat.CategorySettings;
 import xyz.peppie.versatilelogger.chat.ChatCategory;
 import xyz.peppie.versatilelogger.chat.ChatMessageRouter;
 import xyz.peppie.versatilelogger.chat.ClanContextResolver;
+import xyz.peppie.versatilelogger.chat.PendingCommandMessage;
 import xyz.peppie.versatilelogger.config.VersatileLoggerConfig;
 import xyz.peppie.versatilelogger.config.VersatileLoggerConfig.FormatMode;
 import xyz.peppie.versatilelogger.dto.ClanChatDto;
@@ -32,6 +36,7 @@ import xyz.peppie.versatilelogger.dto.FriendsChatDto;
 import xyz.peppie.versatilelogger.dto.FullMessagePayload;
 import xyz.peppie.versatilelogger.dto.MessageDto;
 import xyz.peppie.versatilelogger.dto.UserDto;
+import xyz.peppie.versatilelogger.format.LineIncludeOption;
 import xyz.peppie.versatilelogger.format.MessageFormatter;
 import xyz.peppie.versatilelogger.io.local.LocalLogWriter;
 import xyz.peppie.versatilelogger.io.local.LogRetentionManager;
@@ -45,6 +50,10 @@ import xyz.peppie.versatilelogger.io.remote.RemoteLogSender;
 )
 public class VersatileLoggerPlugin extends Plugin
 {
+	private static final long PENDING_COMMAND_TIMEOUT_MS = 8_000;
+
+	private static final int MAX_PENDING_COMMANDS = 25;
+
 	@Inject
 	private Client client;
 
@@ -66,6 +75,8 @@ public class VersatileLoggerPlugin extends Plugin
 	private final ChatMessageRouter router = new ChatMessageRouter();
 	private final CategoryConfigResolver categoryConfigResolver = new CategoryConfigResolver();
 	private final MessageFormatter messageFormatter = new MessageFormatter();
+
+	private final Map<MessageNode, PendingCommandMessage> pendingCommandMessages = new LinkedHashMap<>();
 
 	private ScheduledExecutorService fileExecutor;
 	private ScheduledFuture<?> retentionTask;
@@ -103,6 +114,7 @@ public class VersatileLoggerPlugin extends Plugin
 
 		localLogWriter.endSession();
 		activeAccountName = null;
+		pendingCommandMessages.clear();
 		remoteLogSender.shutDown();
 
 		if (fileExecutor != null)
@@ -129,15 +141,10 @@ public class VersatileLoggerPlugin extends Plugin
 				localLogWriter.endSession();
 				activeAccountName = null;
 			}
+			pendingCommandMessages.clear();
 		}
 	}
 
-	/**
-	 * {@code GameState.LOGGED_IN} can fire before {@code client.getLocalPlayer()} is actually
-	 * populated, in which case {@link #beginSessionIfNeeded()} would silently no-op with nothing
-	 * to retry it. Re-checking every tick while logged in is cheap (a couple of field reads once
-	 * a session is already active) and guarantees the session eventually starts.
-	 */
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
@@ -145,12 +152,9 @@ public class VersatileLoggerPlugin extends Plugin
 		{
 			beginSessionIfNeeded();
 		}
+		processPendingCommandMessages();
 	}
 
-	/**
-	 * Only starts a new session when the logged-in account actually changed, so world hops
-	 * (which also fire a LOGGED_IN transition) keep writing to the same session's file(s).
-	 */
 	private void beginSessionIfNeeded()
 	{
 		Player localPlayer = client.getLocalPlayer();
@@ -191,20 +195,81 @@ public class VersatileLoggerPlugin extends Plugin
 			return;
 		}
 
-		String line = messageFormatter.buildLine(node, settings.getInclude());
+		logMessage(node, category, chatMessage.getType(), settings, false);
+
+		if (settings.getInclude().contains(LineIncludeOption.COMMAND_OUTPUT) && looksLikeUnresolvedCommand(node))
+		{
+			trackPendingCommand(node, category, chatMessage.getType(), settings);
+		}
+	}
+
+	private static boolean looksLikeUnresolvedCommand(MessageNode node)
+	{
+		if (node.getRuneLiteFormatMessage() != null)
+		{
+			return false;
+		}
+		String value = node.getValue();
+		return value != null && value.trim().startsWith("!");
+	}
+
+	private void trackPendingCommand(MessageNode node, ChatCategory category, ChatMessageType type, CategorySettings settings)
+	{
+		if (pendingCommandMessages.size() >= MAX_PENDING_COMMANDS)
+		{
+			Iterator<MessageNode> oldest = pendingCommandMessages.keySet().iterator();
+			if (oldest.hasNext())
+			{
+				oldest.next();
+				oldest.remove();
+			}
+		}
+		pendingCommandMessages.put(node,
+			new PendingCommandMessage(node, category, type, settings, System.currentTimeMillis()));
+	}
+
+	private void processPendingCommandMessages()
+	{
+		if (pendingCommandMessages.isEmpty())
+		{
+			return;
+		}
+
+		long now = System.currentTimeMillis();
+		Iterator<PendingCommandMessage> iterator = pendingCommandMessages.values().iterator();
+		while (iterator.hasNext())
+		{
+			PendingCommandMessage pending = iterator.next();
+			MessageNode node = pending.getNode();
+
+			if (node.getRuneLiteFormatMessage() != null)
+			{
+				logMessage(node, pending.getCategory(), pending.getType(), pending.getSettings(), true);
+				iterator.remove();
+			}
+			else if (now - pending.getEnqueuedAtMillis() > PENDING_COMMAND_TIMEOUT_MS)
+			{
+				iterator.remove();
+			}
+		}
+	}
+
+	private void logMessage(MessageNode node, ChatCategory category, ChatMessageType type, CategorySettings settings, boolean edited)
+	{
+		String line = messageFormatter.buildLine(node, settings.getInclude(), settings.isDetailedTimestamp());
 
 		if (settings.isLocalEnabled())
 		{
-			localLogWriter.writeLine(category, line);
+			localLogWriter.writeLine(category, edited ? "[updated] " + line : line);
 		}
 
 		if (settings.isRemoteEnabled())
 		{
-			sendRemote(node, chatMessage.getType(), settings, line);
+			sendRemote(node, type, settings, line, edited);
 		}
 	}
 
-	private void sendRemote(MessageNode node, ChatMessageType type, CategorySettings settings, String line)
+	private void sendRemote(MessageNode node, ChatMessageType type, CategorySettings settings, String line, boolean edited)
 	{
 		String url = settings.getEffectiveRemoteUrl();
 		if (url == null || url.isBlank())
@@ -213,9 +278,9 @@ public class VersatileLoggerPlugin extends Plugin
 		}
 		String authToken = config.authToken();
 
-		if (config.formatMode() == FormatMode.FULL)
+		if (settings.getEffectiveFormatMode() == FormatMode.FULL)
 		{
-			MessageDto messageDto = clanContextResolver.buildMessage(node);
+			MessageDto messageDto = clanContextResolver.buildMessage(node, edited);
 			UserDto userDto = clanContextResolver.buildUser(node);
 			ClanChatDto clanChatDto = clanContextResolver.buildClanChat(type);
 			FriendsChatDto friendsChatDto = clanContextResolver.buildFriendsChat(type);
@@ -224,7 +289,7 @@ public class VersatileLoggerPlugin extends Plugin
 		}
 		else
 		{
-			remoteLogSender.sendInGameMessage(url, authToken, line);
+			remoteLogSender.sendInGameMessage(url, authToken, edited ? "(edited) " + line : line);
 		}
 	}
 

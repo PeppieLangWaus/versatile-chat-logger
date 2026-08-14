@@ -19,13 +19,8 @@ import xyz.peppie.versatilelogger.dto.ClanRankDto;
 import xyz.peppie.versatilelogger.dto.FriendsChatDto;
 import xyz.peppie.versatilelogger.dto.MessageDto;
 import xyz.peppie.versatilelogger.dto.UserDto;
+import xyz.peppie.versatilelogger.format.MessageFormatter;
 
-/**
- * Resolves the clan/friends-chat context needed for the "Full" remote format. Every method here
- * reads from {@link Client} and must only be called on the client thread — which is already true
- * for every call site, since they're all invoked synchronously from inside the
- * {@code @Subscribe onChatMessage} handler.
- */
 @Singleton
 public class ClanContextResolver
 {
@@ -37,14 +32,10 @@ public class ClanContextResolver
 		this.client = client;
 	}
 
-	/**
-	 * {@code text} is the raw, unfiltered {@code MessageNode.getValue()} (icon/formatting tags
-	 * intact) — "Full" mode is meant to send every property as-is, unlike "In-game message" mode
-	 * which respects each category's icon-filtering include option.
-	 */
-	public MessageDto buildMessage(MessageNode node)
+	public MessageDto buildMessage(MessageNode node, boolean edited)
 	{
-		return new MessageDto(node.getId(), node.getTimestamp(), node.getType().name(), node.getValue());
+		return new MessageDto(node.getId(), node.getTimestamp(), node.getType().name(),
+			MessageFormatter.resolvedValue(node), edited);
 	}
 
 	public UserDto buildUser(MessageNode node)
@@ -56,10 +47,6 @@ public class ClanContextResolver
 		return new UserDto(senderName, ironmanType, clanRank, friendsChatRank);
 	}
 
-	/**
-	 * Attached for CLAN_CHAT and CLAN_GUEST_CHAT only (per the user's own scoping decision) —
-	 * GIM chat is a separate "group chat" concept and never gets a clanChat object.
-	 */
 	public ClanChatDto buildClanChat(ChatMessageType type)
 	{
 		if (type == ChatMessageType.CLAN_CHAT)
@@ -104,8 +91,6 @@ public class ClanContextResolver
 		member = guest == null ? null : guest.findMember(sanitized);
 		if (member != null)
 		{
-			// No client API exposes the guest clan's numeric id from a ClanChannel, so a title
-			// can't be resolved here for guest-clan members; the numeric rank is still returned.
 			return new ClanRankDto(member.getRank().getRank(), null);
 		}
 
@@ -123,10 +108,6 @@ public class ClanContextResolver
 		return new ClanRankDto(rank.getRank(), title);
 	}
 
-	/**
-	 * Resolves the message sender's own friends-chat rank (not the local player's), so this
-	 * field is meaningful regardless of who sent the message.
-	 */
 	private String resolveFriendsChatRank(String senderName)
 	{
 		if (senderName == null || senderName.isBlank())

@@ -13,18 +13,21 @@ import net.runelite.client.util.Text;
  */
 public class MessageFormatter
 {
-	private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss")
+	private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
+		.withZone(ZoneId.systemDefault());
+	private static final DateTimeFormatter TIME_FORMAT_DETAILED = DateTimeFormatter.ofPattern("HH:mm:ss")
 		.withZone(ZoneId.systemDefault());
 
-	public String buildLine(MessageNode node, Set<LineIncludeOption> include)
+	public String buildLine(MessageNode node, Set<LineIncludeOption> include, boolean detailedTimestamp)
 	{
 		boolean showIcons = include.contains(LineIncludeOption.ICONS);
 		StringBuilder line = new StringBuilder();
 
 		if (include.contains(LineIncludeOption.TIMESTAMP))
 		{
+			DateTimeFormatter timeFormat = detailedTimestamp ? TIME_FORMAT_DETAILED : TIME_FORMAT;
 			line.append('[')
-				.append(TIME_FORMAT.format(Instant.ofEpochSecond(node.getTimestamp())))
+				.append(timeFormat.format(Instant.ofEpochSecond(node.getTimestamp())))
 				.append("] ");
 		}
 
@@ -43,16 +46,17 @@ public class MessageFormatter
 			line.append(speaker).append(": ");
 		}
 
-		line.append(applyIconFilter(node.getValue(), showIcons));
+		line.append(applyIconFilter(resolvedValue(node), showIcons));
 
 		return line.toString();
 	}
 
-	/**
-	 * When icons are included, the raw value is left as-is (embedded {@code <img=NN>}/formatting
-	 * tags intact, matching what the game client itself would render). When excluded, all tags
-	 * are stripped via {@link Text#removeTags(String)}.
-	 */
+	public static String resolvedValue(MessageNode node)
+	{
+		String formatted = node.getRuneLiteFormatMessage();
+		return formatted != null ? formatted : node.getValue();
+	}
+
 	private static String applyIconFilter(String raw, boolean showIcons)
 	{
 		String value = raw == null ? "" : raw;
