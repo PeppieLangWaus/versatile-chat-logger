@@ -5,11 +5,6 @@ import java.util.Set;
 import lombok.Getter;
 import net.runelite.api.ChatMessageType;
 
-/**
- * The 11 message categories this plugin can log independently. Each category is either routed
- * directly off one or more {@link ChatMessageType} values, or (for the three GAMEMESSAGE-derived
- * categories) reached only via {@link GameMessagePatterns} and carries an empty type set here.
- */
 @Getter
 public enum ChatCategory
 {

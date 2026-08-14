@@ -21,12 +21,6 @@ import xyz.peppie.versatilelogger.dto.MessageDto;
 import xyz.peppie.versatilelogger.dto.UserDto;
 import xyz.peppie.versatilelogger.format.MessageFormatter;
 
-/**
- * Resolves the clan/friends-chat context needed for the "Full" remote format. Every method here
- * reads from {@link Client} and must only be called on the client thread — which is already true
- * for every call site, since they're all invoked synchronously from inside the
- * {@code @Subscribe onChatMessage} handler.
- */
 @Singleton
 public class ClanContextResolver
 {
@@ -38,13 +32,6 @@ public class ClanContextResolver
 		this.client = client;
 	}
 
-	/**
-	 * {@code text} is {@link MessageFormatter#resolvedValue(MessageNode)} - the node's current
-	 * value with icon/formatting tags intact - unlike "In-game message" mode which respects each
-	 * category's icon-filtering include option. For a chat command this is the raw command text
-	 * until it resolves; {@code edited} is set on the follow-up resend once it does, so a backend
-	 * can tell the two sends apart while correlating them by {@code id}.
-	 */
 	public MessageDto buildMessage(MessageNode node, boolean edited)
 	{
 		return new MessageDto(node.getId(), node.getTimestamp(), node.getType().name(),
@@ -53,14 +40,6 @@ public class ClanContextResolver
 
 	public UserDto buildUser(MessageNode node)
 	{
-		// Deliberately the raw node value, NOT Text.sanitize(node.getName()) - sanitize also
-		// strips a leading <img=N> tag (the client embeds the sender's mod/ironman status that
-		// way), which the frontend needs intact to show that icon. A previous version of this
-		// method called Text.sanitize() here specifically to normalize U+00A0 (non-breaking
-		// space) in two-word RSNs for a downstream consumer's benefit (splash-helper-backend
-		// resolving !log/!pets against RuneProfile's/RuneLite's own API) - that silently broke
-		// the status icon for every sender. That normalization now happens backend-side instead,
-		// scoped to just the API-lookup username rather than this display-facing field.
 		String senderName = node.getName();
 		int ironmanType = client.getVarbitValue(VarbitID.IRONMAN);
 		ClanRankDto clanRank = resolveClanRank(senderName);
@@ -68,10 +47,6 @@ public class ClanContextResolver
 		return new UserDto(senderName, ironmanType, clanRank, friendsChatRank);
 	}
 
-	/**
-	 * Attached for CLAN_CHAT and CLAN_GUEST_CHAT only (per the user's own scoping decision) —
-	 * GIM chat is a separate "group chat" concept and never gets a clanChat object.
-	 */
 	public ClanChatDto buildClanChat(ChatMessageType type)
 	{
 		if (type == ChatMessageType.CLAN_CHAT)
@@ -116,8 +91,6 @@ public class ClanContextResolver
 		member = guest == null ? null : guest.findMember(sanitized);
 		if (member != null)
 		{
-			// No client API exposes the guest clan's numeric id from a ClanChannel, so a title
-			// can't be resolved here for guest-clan members; the numeric rank is still returned.
 			return new ClanRankDto(member.getRank().getRank(), null);
 		}
 
@@ -135,10 +108,6 @@ public class ClanContextResolver
 		return new ClanRankDto(rank.getRank(), title);
 	}
 
-	/**
-	 * Resolves the message sender's own friends-chat rank (not the local player's), so this
-	 * field is meaningful regardless of who sent the message.
-	 */
 	private String resolveFriendsChatRank(String senderName)
 	{
 		if (senderName == null || senderName.isBlank())

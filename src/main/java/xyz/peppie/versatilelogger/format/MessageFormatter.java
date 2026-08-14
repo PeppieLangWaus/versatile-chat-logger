@@ -51,26 +51,12 @@ public class MessageFormatter
 		return line.toString();
 	}
 
-	/**
-	 * Chat commands (e.g. {@code !log}, {@code !pets}) aren't resolved by editing
-	 * {@link MessageNode#getValue()} or by firing a new event - RuneLite's {@code
-	 * ChatCommandManager}, and third-party plugins built on it such as RuneProfile, resolve them
-	 * by overwriting {@link MessageNode#getRuneLiteFormatMessage()} on the same node, sometimes
-	 * after a network round trip. Preferring it here - matching what the client itself renders -
-	 * means a caller that re-reads a node after resolution automatically picks up the output
-	 * instead of the raw command text.
-	 */
 	public static String resolvedValue(MessageNode node)
 	{
 		String formatted = node.getRuneLiteFormatMessage();
 		return formatted != null ? formatted : node.getValue();
 	}
 
-	/**
-	 * When icons are included, the raw value is left as-is (embedded {@code <img=NN>}/formatting
-	 * tags intact, matching what the game client itself would render). When excluded, all tags
-	 * are stripped via {@link Text#removeTags(String)}.
-	 */
 	private static String applyIconFilter(String raw, boolean showIcons)
 	{
 		String value = raw == null ? "" : raw;
